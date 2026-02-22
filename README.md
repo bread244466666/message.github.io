@@ -143,7 +143,8 @@
     </div>
     <script>
         // Replace with your Firebase config
-       const firebaseConfig = {
+      import { initializeApp } from "firebase/app";
+        const firebaseConfig = {
   apiKey: "AIzaSyC4oYXDJb5Lbb4B3nAqX-Hmxf18s13whyA",
   authDomain: "message-5ce86.firebaseapp.com",
   databaseURL: "https://message-5ce86-default-rtdb.firebaseio.com",
