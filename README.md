@@ -1,4 +1,3 @@
-<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
@@ -118,7 +117,7 @@
 </head>
 <body>
     <div id="main-wrapper">
-        <h2 id="app-title"><strong>Chat App using HTML, CSS, JS, and Firebase</strong></h2>
+        <h2 id="app-title"><strong>Chat App</strong></h2>
         <div id="conversation-box" class="card rounded-0">
             <div class="card-header rounded-0">
                 <h4 class="card-title"><strong>Conversation Box</strong></h4>
