@@ -1,4 +1,3 @@
-
 <html lang="en">
 <head>
     <meta charset="UTF-8">
@@ -7,7 +6,6 @@
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css">
     <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
-    <!-- Firebase SDKs (Compat versions for namespaced API) -->
     <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-database-compat.js"></script>
     <style>
@@ -167,8 +165,10 @@
 
         function setupChat() {
             var enter_user = prompt("Enter Your Name");
-            if (enter_user !== "") {
-                user_name = enter_user;
+            
+            // Fixed: Handle Cancel and empty spaces properly
+            if (enter_user && enter_user.trim() !== "") {
+                user_name = enter_user.trim();
             } else {
                 alert("User Name must be provided!");
                 location.reload();
@@ -180,14 +180,24 @@
             messagesRef.orderByChild("timestamp").limitToLast(50).on("child_added", (snapshot) => {
                 const msgData = snapshot.val();
                 if (!msgData) return;
-                var bubble = $(msgBubble).clone(true);
+                
+                // Fixed: Remove redundant .clone(true)
+                var bubble = $(msgBubble);
                 bubble.addClass(msgData.user === user_name ? "sent" : "received");
+                
                 if (msgData.user !== user_name) {
                     bubble.find(".sender-name").text(`${msgData.user}`);
                 }
-                var content = (msgData.msg).replace(/\n/gi, "<br>");
-                bubble.find(".message-content").html(content);
+                
+                // Fixed: Safely set text to prevent XSS, then replace line breaks
+                bubble.find(".message-content")
+                      .text(msgData.msg)
+                      .html(function(i, html) { 
+                          return html.replace(/\n/g, "<br>"); 
+                      });
+                      
                 $('#message-items-container').append(bubble);
+                
                 // Scroll to bottom
                 const container = $('#message-items-container')[0];
                 container.scrollTop = container.scrollHeight;
