@@ -1,3 +1,4 @@
+
 <html lang="en">
 <head>
     <meta charset="UTF-8">
@@ -13,38 +14,41 @@
 
         * {
             font-family: "Ubuntu Mono", serif;
-            box-sizing: border-box; /* Better sizing control */
+            font-weight: 400;
+            font-style: normal;
         }
 
-        /* 1. Ensure the viewport takes up the full screen height */
+        strong, b {
+            font-weight: 700;
+        }
+
         html, body {
-            margin: 0;
-            padding: 0;
-            height: 100vh; 
-            width: 100vw;
-            overflow: hidden; /* Prevents accidental scrollbars */
+            margin: unset;
+            padding: unset;
+            height: 100%;
+            max-height: 100%;
+            width: 100%;
+            max-width: 100%;
+            overflow: auto;
         }
 
-        /* 2. Flexbox centering logic */
         body {
             display: flex;
-            align-items: center;      /* Vertical center */
-            justify-content: center;   /* Horizontal center */
+            flex-flow: column;
+            align-items: center;
+            justify-content: center;
             background-image: linear-gradient(to top, #48c6ef 0%, #6f86d6 100%);
         }
 
         #main-wrapper {
-            width: 100%;
-            max-width: 400px; /* Slightly wider for better readability */
-            padding: 20px;
+            width: 350px;
         }
 
         #app-title {
             color: #fff;
-            text-shadow: 0px 3px 5px rgba(0,0,0,0.2);
+            text-shadow: 0px 3px 5px #9a9a9a;
             text-align: center;
-            margin-bottom: 25px;
-            font-size: 1.5rem;
+            margin-bottom: 50px;
         }
 
         #msg-txt-field {
@@ -58,14 +62,16 @@
         #send-btn {
             width: 100%;
             height: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
         }
 
         #message-items-container {
-            height: 350px; /* Increased height */
-            overflow-y: auto;
+            height: 300px;
+            overflow: auto;
             display: flex;
             flex-flow: column;
-            background: #fff;
         }
 
         #message-items-container:empty {
@@ -77,6 +83,7 @@
             content: "conversation box is currently empty...";
             font-size: 11px;
             font-style: italic;
+            align-self: center;
             color: #858585;
         }
 
@@ -85,58 +92,53 @@
             padding: 10px;
             margin-bottom: 10px;
             border-radius: 15px;
-            word-wrap: break-word; /* Prevents long text from breaking layout */
         }
 
         .message-item.received {
             background-image: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
-            align-self: flex-start;
+            align-self: start;
         }
 
         .message-item.sent {
             background-image: linear-gradient(120deg, #89f7fe 0%, #66a6ff 100%);
-            align-self: flex-end;
-            text-align: right;
+            align-self: end;
         }
 
         .message-item .sender-name {
             font-style: italic;
             font-size: 11px;
-            display: block;
-            margin-bottom: 2px;
         }
 
         .message-item .message-content {
-            font-size: 13px;
+            font-size: 12px;
         }
     </style>
 </head>
 <body>
     <div id="main-wrapper">
-        <h2 id="app-title"><strong> Chat</strong></h2>
-        <div id="conversation-box" class="card shadow-lg border-0">
-            <div class="card-header bg-white">
-                <h5 class="card-title mb-0"><strong>Conversation</strong></h5>
+        <h2 id="app-title"><strong>Chat App using HTML, CSS, JS, and Firebase</strong></h2>
+        <div id="conversation-box" class="card rounded-0">
+            <div class="card-header rounded-0">
+                <h4 class="card-title"><strong>Conversation Box</strong></h4>
             </div>
-            <div class="card-body p-2">
+            <div class="card-body rounded-0">
                 <div class="container-fluid" id="message-items-container"></div>
             </div>
-            <div class="card-footer bg-light border-0">
-                <div class="mb-2">
-                    <small class="text-muted">User: <span id="userName" class="fw-bold"></span></small>
+            <div class="card-footer rounded-0">
+                <div>
+                    <span><small><i class="text-muted">You are logged in as: <span id="userName"></span></i></small></span>
                 </div>
-                <div class="d-flex w-100 gap-2">
-                    <div class="flex-grow-1">
-                        <textarea id="msg-txt-field" rows="2" class="form-control form-control-sm" placeholder="Type a message..."></textarea>
+                <div class="d-flex w-100">
+                    <div class="flex-grow-1" id="txt-field-container">
+                        <textarea id="msg-txt-field" rows="2" class="form-control form-control-sm rounded-0" placeholder="Write your message here..."></textarea>
                     </div>
                     <div id="send-btn-container">
-                        <button class="btn btn-primary btn-sm h-100 w-100" id="send-btn">Send</button>
+                        <button class="btn btn-primary rounded-0" id="send-btn"><strong>Send</strong></button>
                     </div>
                 </div>
             </div>
         </div>
     </div>
-
     <script>
         // Your Firebase config
         const firebaseConfig = {
@@ -149,55 +151,63 @@
             appId: "1:532852021993:web:4bfce7c8796bd6cdb9ae78"
         };
 
+        // Initialize Firebase
         const app = firebase.initializeApp(firebaseConfig);
         const db = firebase.database();
-        const messagesRef = db.ref("messages");
-        let user_name = "";
 
-        const msgBubbleTemplate = `
-            <div class="message-item">
-                <span class="text-muted sender-name"></span>
-                <div class="message-content"></div>
-            </div>`;
+        // Message bubble template
+        let msgBubble = `<div class="message-item">
+            <div><span class="text-muted sender-name"></span></div>
+            <div class="message-content"></div>
+        </div>`;
+
+        let user_name = "";
+        let messagesRef = db.ref("messages");
 
         function setupChat() {
-            let enter_user = prompt("Enter Your Name");
+            var enter_user = prompt("Enter Your Name");
             
+            // Fixed: Handle Cancel and empty spaces properly
             if (enter_user && enter_user.trim() !== "") {
                 user_name = enter_user.trim();
             } else {
-                alert("Username is required!");
+                alert("User Name must be provided!");
                 location.reload();
                 return;
             }
-            
             $('#userName').text(user_name);
 
+            // Listen for real-time messages (using child_added for efficiency, limit to last 50)
             messagesRef.orderByChild("timestamp").limitToLast(50).on("child_added", (snapshot) => {
                 const msgData = snapshot.val();
                 if (!msgData) return;
                 
-                const $bubble = $(msgBubbleTemplate);
-                $bubble.addClass(msgData.user === user_name ? "sent" : "received");
+                // Fixed: Remove redundant .clone(true)
+                var bubble = $(msgBubble);
+                bubble.addClass(msgData.user === user_name ? "sent" : "received");
                 
                 if (msgData.user !== user_name) {
-                    $bubble.find(".sender-name").text(msgData.user);
+                    bubble.find(".sender-name").text(`${msgData.user}`);
                 }
                 
-                $bubble.find(".message-content")
+                // Fixed: Safely set text to prevent XSS, then replace line breaks
+                bubble.find(".message-content")
                       .text(msgData.msg)
                       .html(function(i, html) { 
                           return html.replace(/\n/g, "<br>"); 
                       });
                       
-                $('#message-items-container').append($bubble);
+                $('#message-items-container').append(bubble);
                 
+                // Scroll to bottom
                 const container = $('#message-items-container')[0];
                 container.scrollTop = container.scrollHeight;
             });
 
+            // Send button click event
             $('#send-btn').on("click", triggerSend);
 
+            // Enter key press event in text field
             $('#msg-txt-field').on("keypress", function (e) {
                 if (e.key === "Enter" && !e.shiftKey) {
                     e.preventDefault();
@@ -206,20 +216,27 @@
             });
         }
 
+        // Function to handle sending messages
         function triggerSend() {
-            const msg = $("#msg-txt-field").val().trim();
+            var msg = $("#msg-txt-field").val().trim();
             if (msg === "") return;
 
+            // Send to Realtime Database
             messagesRef.push({
                 user: user_name,
                 msg: msg,
                 timestamp: firebase.database.ServerValue.TIMESTAMP
+            }).catch((error) => {
+                console.error("Error sending message:", error);
             });
 
-            $("#msg-txt-field").val("").focus();
+            $("#msg-txt-field").val("");
+            $("#msg-txt-field").focus();
         }
 
-        $(document).ready(setupChat);
+        $(document).ready(function () {
+            setupChat();
+        });
     </script>
 </body>
 </html>
