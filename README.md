@@ -1,3 +1,4 @@
+<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
@@ -6,10 +7,9 @@
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css">
     <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
-    <!-- Firebase SDKs -->
-    <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-auth.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore.js"></script>
+    <!-- Firebase SDKs (Compat versions for namespaced API) -->
+    <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-database-compat.js"></script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Ubuntu+Mono:ital,wght@0,400;0,700;1,400;1,700&display=swap');
 
@@ -72,7 +72,7 @@
             height: 300px;
             overflow: auto;
             display: flex;
-            flex-flow: column-reverse;
+            flex-flow: column;
         }
 
         #message-items-container:empty {
@@ -117,7 +117,7 @@
 </head>
 <body>
     <div id="main-wrapper">
-        <h2 id="app-title"><strong>Chat App</strong></h2>
+        <h2 id="app-title"><strong>Chat App using HTML, CSS, JS, and Firebase</strong></h2>
         <div id="conversation-box" class="card rounded-0">
             <div class="card-header rounded-0">
                 <h4 class="card-title"><strong>Conversation Box</strong></h4>
@@ -141,22 +141,20 @@
         </div>
     </div>
     <script>
-        // Replace with your Firebase config
-      import { initializeApp } from "firebase/app";
+        // Your Firebase config
         const firebaseConfig = {
-  apiKey: "AIzaSyC4oYXDJb5Lbb4B3nAqX-Hmxf18s13whyA",
-  authDomain: "message-5ce86.firebaseapp.com",
-  databaseURL: "https://message-5ce86-default-rtdb.firebaseio.com",
-  projectId: "message-5ce86",
-  storageBucket: "message-5ce86.firebasestorage.app",
-  messagingSenderId: "532852021993",
-  appId: "1:532852021993:web:4bfce7c8796bd6cdb9ae78"
-};
+            apiKey: "AIzaSyC4oYXDJb5Lbb4B3nAqX-Hmxf18s13whyA",
+            authDomain: "message-5ce86.firebaseapp.com",
+            databaseURL: "https://message-5ce86-default-rtdb.firebaseio.com",
+            projectId: "message-5ce86",
+            storageBucket: "message-5ce86.firebasestorage.app",
+            messagingSenderId: "532852021993",
+            appId: "1:532852021993:web:4bfce7c8796bd6cdb9ae78"
+        };
 
         // Initialize Firebase
         const app = firebase.initializeApp(firebaseConfig);
-        const auth = firebase.auth();
-        const db = firebase.firestore();
+        const db = firebase.database();
 
         // Message bubble template
         let msgBubble = `<div class="message-item">
@@ -164,54 +162,36 @@
             <div class="message-content"></div>
         </div>`;
 
-        let user_name = localStorage.getItem("userName") || "";
-        let currentUser = null;
-
-        // Listen for auth state changes
-        auth.onAuthStateChanged((user) => {
-            if (user) {
-                currentUser = user;
-                setupChat();
-            } else {
-                // Sign in anonymously
-                auth.signInAnonymously().catch((error) => {
-                    console.error("Anonymous auth failed:", error);
-                });
-            }
-        });
+        let user_name = "";
+        let messagesRef = db.ref("messages");
 
         function setupChat() {
-            if (user_name === "") {
-                var enter_user = prompt("Enter Your Name");
-                if (enter_user !== "") {
-                    user_name = enter_user;
-                    localStorage.setItem("userName", user_name);
-                } else {
-                    alert("User Name must be provided!");
-                    location.reload();
-                    return;
-                }
+            var enter_user = prompt("Enter Your Name");
+            if (enter_user !== "") {
+                user_name = enter_user;
+            } else {
+                alert("User Name must be provided!");
+                location.reload();
+                return;
             }
             $('#userName').text(user_name);
 
-            // Listen for real-time messages (limit to last 50 for performance)
-            db.collection("messages")
-                .orderBy("timestamp", "desc")
-                .limit(50)
-                .onSnapshot((snapshot) => {
-                    $('#message-items-container').empty(); // Clear and rebuild to avoid duplicates
-                    snapshot.forEach((doc) => {
-                        const msgData = doc.data();
-                        var bubble = $(msgBubble).clone(true);
-                        bubble.addClass(msgData.user === user_name ? "sent" : "received");
-                        if (msgData.user !== user_name) {
-                            bubble.find(".sender-name").text(`${msgData.user}`);
-                        }
-                        var content = (msgData.msg).replace(/\n/gi, "<br>");
-                        bubble.find(".message-content").html(content);
-                        $('#message-items-container').prepend(bubble); // Prepend to maintain order
-                    });
-                });
+            // Listen for real-time messages (using child_added for efficiency, limit to last 50)
+            messagesRef.orderByChild("timestamp").limitToLast(50).on("child_added", (snapshot) => {
+                const msgData = snapshot.val();
+                if (!msgData) return;
+                var bubble = $(msgBubble).clone(true);
+                bubble.addClass(msgData.user === user_name ? "sent" : "received");
+                if (msgData.user !== user_name) {
+                    bubble.find(".sender-name").text(`${msgData.user}`);
+                }
+                var content = (msgData.msg).replace(/\n/gi, "<br>");
+                bubble.find(".message-content").html(content);
+                $('#message-items-container').append(bubble);
+                // Scroll to bottom
+                const container = $('#message-items-container')[0];
+                container.scrollTop = container.scrollHeight;
+            });
 
             // Send button click event
             $('#send-btn').on("click", triggerSend);
@@ -230,11 +210,11 @@
             var msg = $("#msg-txt-field").val().trim();
             if (msg === "") return;
 
-            // Send to Firestore
-            db.collection("messages").add({
+            // Send to Realtime Database
+            messagesRef.push({
                 user: user_name,
                 msg: msg,
-                timestamp: firebase.firestore.FieldValue.serverTimestamp()
+                timestamp: firebase.database.ServerValue.TIMESTAMP
             }).catch((error) => {
                 console.error("Error sending message:", error);
             });
@@ -244,7 +224,7 @@
         }
 
         $(document).ready(function () {
-            // Auth will trigger setupChat
+            setupChat();
         });
     </script>
 </body>
